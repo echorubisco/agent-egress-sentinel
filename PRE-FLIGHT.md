@@ -58,7 +58,28 @@ allowlist.
 
 ---
 
-## 3. The one number worth more than the gates
+## 3. The one number worth more than the gates — **FIRST RESULT 2026-08-07**
+
+> **Measured, on real agent traffic, for the first time.** 39 tool calls, 594
+> tunnels, 13 distinct hosts. The reconciler's entire false-positive surface was
+> **two hosts, both the agent vendor's own infrastructure**:
+> `mcp-proxy.anthropic.com` (125 tunnels) and
+> `http-intake.logs.us5.datadoghq.com` (34). 2 of 12 non-allowlisted hosts = 17%.
+> Across two sessions no new host appeared. Pre-registered predictions R1–R4 all
+> hold; see [RECON-FP-PREREG.md](RECON-FP-PREREG.md) (local, not in the repo).
+>
+> **So `activity.py`'s central claim — that this converts an unenumerable
+> false-positive surface into an enumerable one — now has data behind it rather
+> than an argument.** The whole surface is three hosts and all are allowlistable.
+>
+> **Read as a floor, not as the shipped number.** The measurement routes only the
+> agent through a proxy, so browsers, EDR and OS telemetry cannot enter; the
+> shipped path feeds the reconciler every non-AI flow on the machine. And it is a
+> driven workload, not a working day. The hook is now installed globally, so an
+> ordinary day of work produces the real sample at no extra cost.
+
+The original statement of why this mattered, kept because it is still the reason:
+
 
 **The reconciler has never seen real traffic.** It is the only check in this repo
 that is not a threshold — it asks "did anything declare this?" instead of "is
