@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="1000" height="600" font-family="ui-sans-serif,-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
+<!-- BRIEF: Blueprint/flat-geometric explainer for the Show HN post on Agent Egress
+     Sentinel. Four observation layers for AI-agent egress, top = closest to the
+     agent's reasoning (rich but self-reported), bottom = closest to the wire
+     (poor but unforgeable). Each band: layer id, what it reads, the question it
+     answers, and how trustworthy the source is. Right column states honestly what
+     THIS tool implements at each layer. A bracket links L1<->L3 to show the
+     reconciliation idea, keyed on process lineage. Palette: paper #f7f8fa, ink
+     #1c2430, slate #5b6673, blue #2f6f9f, green #2f7d54, amber #b07d0a, red #b0392f.
+     Stable ids: background, title, axis, band-l1..l4, status-l1..l4, reconcile, footer. -->
+<defs>
+  <linearGradient id="trustGrad" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#b0392f"/><stop offset="55%" stop-color="#b07d0a"/><stop offset="100%" stop-color="#2f7d54"/>
+  </linearGradient>
+  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0 0 L10 5 L0 10 z" fill="#2f6f9f"/>
+  </marker>
+</defs>
+
+<rect id="background" width="1000" height="600" fill="#f7f8fa"/>
+
+<g id="title">
+  <text x="40" y="42" font-size="21" font-weight="700" fill="#1c2430">Where an egress control can sit — and what each layer can be asked</text>
+  <text x="40" y="66" font-size="13.5" fill="#5b6673">The higher the layer, the more it understands and the more it shares a failure domain with the thing it judges.</text>
+</g>
+
+<!-- trust axis -->
+<g id="axis">
+  <rect x="40" y="92" width="7" height="384" rx="3.5" fill="url(#trustGrad)"/>
+  <text x="58" y="106" font-size="11" font-weight="600" fill="#b0392f">RICH · SELF-REPORTED</text>
+  <text x="58" y="472" font-size="11" font-weight="600" fill="#2f7d54">POOR · UNFORGEABLE</text>
+</g>
+
+<!-- ============ L1 ============ -->
+<g id="band-l1">
+  <rect x="196" y="92" width="520" height="88" rx="6" fill="#ffffff" stroke="#d3d8de"/>
+  <rect x="196" y="92" width="5" height="88" rx="2.5" fill="#b0392f"/>
+  <text x="216" y="118" font-size="15" font-weight="700" fill="#1c2430">L1 · SEMANTIC</text>
+  <text x="216" y="140" font-size="12.5" fill="#5b6673">tool calls · pre/post-tool hooks · MCP gateway logs · declared intent</text>
+  <text x="216" y="162" font-size="13" font-style="italic" fill="#2f6f9f">“what it says it is about to do”</text>
+  <text x="700" y="118" font-size="11" font-weight="600" text-anchor="end" fill="#b0392f">produced BY the agent</text>
+</g>
+<g id="status-l1">
+  <rect x="732" y="92" width="228" height="88" rx="6" fill="#fdf6ec" stroke="#e6d3ae"/>
+  <text x="748" y="116" font-size="11.5" font-weight="700" fill="#b07d0a">THIS TOOL: v0, OFF BY DEFAULT</text>
+  <text x="748" y="137" font-size="11.5" fill="#5b6673">reads a declaration log if an</text>
+  <text x="748" y="153" font-size="11.5" fill="#5b6673">agent writes one. Nothing on</text>
+  <text x="748" y="169" font-size="11.5" fill="#5b6673">this machine writes one yet.</text>
+</g>
+
+<!-- ============ L2 ============ -->
+<g id="band-l2">
+  <rect x="196" y="190" width="520" height="88" rx="6" fill="#ffffff" stroke="#d3d8de"/>
+  <rect x="196" y="190" width="5" height="88" rx="2.5" fill="#b07d0a"/>
+  <text x="216" y="216" font-size="15" font-weight="700" fill="#1c2430">L2 · PROCESS</text>
+  <text x="216" y="238" font-size="12.5" fill="#5b6673">process tree (ppid via libproc) · exec events</text>
+  <text x="216" y="260" font-size="13" font-style="italic" fill="#2f6f9f">“which child process actually opened the socket”</text>
+  <text x="700" y="216" font-size="11" font-weight="600" text-anchor="end" fill="#b07d0a">provided by the OS</text>
+</g>
+<g id="status-l2">
+  <rect x="732" y="190" width="228" height="88" rx="6" fill="#fdf6ec" stroke="#e6d3ae"/>
+  <text x="748" y="214" font-size="11.5" font-weight="700" fill="#b07d0a">THIS TOOL: PARTIAL</text>
+  <text x="748" y="235" font-size="11.5" fill="#5b6673">ancestry walk works — alerts</text>
+  <text x="748" y="251" font-size="11.5" fill="#5b6673">read “claude via git”. No exec</text>
+  <text x="748" y="267" font-size="11.5" fill="#5b6673">events, so it samples, not sees.</text>
+</g>
+
+<!-- ============ L3 ============ -->
+<g id="band-l3">
+  <rect x="196" y="288" width="520" height="88" rx="6" fill="#ffffff" stroke="#2f7d54" stroke-width="1.8"/>
+  <rect x="196" y="288" width="5" height="88" rx="2.5" fill="#2f7d54"/>
+  <text x="216" y="314" font-size="15" font-weight="700" fill="#1c2430">L3 · NETWORK<tspan font-size="11" font-weight="600" fill="#2f7d54" dx="10">← GROUND TRUTH</tspan></text>
+  <text x="216" y="336" font-size="12.5" fill="#5b6673">DNS queries · TLS SNI · connect() 5-tuple · bytes out / bytes in</text>
+  <text x="216" y="358" font-size="13" font-style="italic" fill="#2f6f9f">“where the bytes actually went, and how many”</text>
+  <text x="700" y="314" font-size="11" font-weight="600" text-anchor="end" fill="#2f7d54">read off the wire</text>
+</g>
+<g id="status-l3">
+  <rect x="732" y="288" width="228" height="88" rx="6" fill="#eef6f1" stroke="#a9cdb8"/>
+  <text x="748" y="312" font-size="11.5" font-weight="700" fill="#2f7d54">THIS TOOL: IMPLEMENTED</text>
+  <text x="748" y="333" font-size="11.5" fill="#5b6673">SNI + per-flow bytes, sampled</text>
+  <text x="748" y="349" font-size="11.5" fill="#5b6673">at 1 s. No DNS, no HTTP Host.</text>
+  <text x="748" y="365" font-size="11.5" fill="#5b6673">Recall = min(1, L/T) — see ch. 3.</text>
+</g>
+
+<!-- ============ L4 ============ -->
+<g id="band-l4">
+  <rect x="196" y="386" width="520" height="88" rx="6" fill="#ffffff" stroke="#d3d8de" stroke-dasharray="5 4"/>
+  <rect x="196" y="386" width="5" height="88" rx="2.5" fill="#5b6673"/>
+  <text x="216" y="412" font-size="15" font-weight="700" fill="#1c2430">L4 · ENFORCEMENT</text>
+  <text x="216" y="434" font-size="12.5" fill="#5b6673">default-deny egress · allowlist proxy · human approval on the risky step</text>
+  <text x="216" y="456" font-size="13" font-style="italic" fill="#2f6f9f">“where it is allowed to go at all”</text>
+  <text x="700" y="412" font-size="11" font-weight="600" text-anchor="end" fill="#5b6673">a mechanism, not a report</text>
+</g>
+<g id="status-l4">
+  <rect x="732" y="386" width="228" height="88" rx="6" fill="#f1f2f4" stroke="#d3d8de"/>
+  <text x="748" y="410" font-size="11.5" font-weight="700" fill="#5b6673">THIS TOOL: NOT BUILT</text>
+  <text x="748" y="431" font-size="11.5" fill="#5b6673">Every source cited in the post puts</text>
+  <text x="748" y="447" font-size="11.5" fill="#5b6673">containment first. Watching is the</text>
+  <text x="748" y="463" font-size="11.5" fill="#5b6673">cheapest layer, not the strongest.</text>
+</g>
+
+<!-- reconciliation bracket L1 <-> L3 -->
+<g id="reconcile">
+  <path d="M186 136 H150 V332 H186" fill="none" stroke="#2f6f9f" stroke-width="1.8" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="146" y="206" font-size="12" font-weight="700" fill="#2f6f9f" text-anchor="end">RECONCILE</text>
+  <text x="146" y="226" font-size="10.5" fill="#5b6673" text-anchor="end">egress with</text>
+  <text x="146" y="241" font-size="10.5" fill="#5b6673" text-anchor="end">no declaration</text>
+  <text x="146" y="256" font-size="10.5" fill="#5b6673" text-anchor="end">behind it</text>
+  <text x="146" y="277" font-size="10.5" fill="#5b6673" text-anchor="end">key = lineage</text>
+  <text x="146" y="292" font-size="10.5" fill="#5b6673" text-anchor="end">(L2 joins)</text>
+</g>
+
+<g id="footer">
+  <line x1="40" y1="512" x2="960" y2="512" stroke="#d3d8de"/>
+  <text x="40" y="536" font-size="12.5" fill="#1c2430"><tspan font-weight="700">The asymmetry:</tspan> the layer that understands intent best is the one the agent can narrate. Byte counts and SNI come from the OS and the wire,</text>
+  <text x="40" y="556" font-size="12.5" fill="#1c2430">so they cannot be narrated — which is exactly why they are the cheapest available cross-check on a declared intent, and why they are also the dumbest.</text>
+  <text x="40" y="580" font-size="11.5" fill="#5b6673">Caveat that belongs on the picture: the measurement is unforgeable, the measurer is not. Anything running as you can kill the observer.</text>
+</g>
+</svg>

@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640" width="1000" height="640" font-family="ui-sans-serif,-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
+<!-- BRIEF: Blueprint/flat-geometric data chart for the Show HN post. Destination
+     recall against per-connection lifetime L, with the sampling interval T held at
+     the shipped 1 s. Dashed grey = prediction min(1, L/T) written down BEFORE the
+     run; solid blue with dots = measured against 57 real destinations with
+     getpeername() ground truth. Below the plot: what the fixed MIN_DESTS=20
+     threshold corresponds to in real destinations at each lifetime, which is the
+     actionable consequence. Palette: paper #f7f8fa, ink #1c2430, slate #5b6673,
+     blue #2f6f9f, grey #8b949e, red #b0392f, green #2f7d54.
+     Stable ids: background, title, grid, axes, predicted, measured, annotations,
+     threshold-table, footer. -->
+<rect id="background" width="1000" height="640" fill="#f7f8fa"/>
+
+<g id="title">
+  <text x="40" y="42" font-size="21" font-weight="700" fill="#1c2430">Recall is a property of the workload, not of the sampler</text>
+  <text x="40" y="66" font-size="13.5" fill="#5b6673">Sampling interval T held at the shipped 1 s. One long-lived process, 57 real destinations, ground truth from <tspan font-family="ui-monospace,Menlo,monospace">getpeername()</tspan>.</text>
+</g>
+
+<!-- grid -->
+<g id="grid" stroke="#e3e7eb" stroke-width="1">
+  <line x1="120" y1="100" x2="880" y2="100"/><line x1="120" y1="185" x2="880" y2="185"/>
+  <line x1="120" y1="270" x2="880" y2="270"/><line x1="120" y1="355" x2="880" y2="355"/>
+</g>
+
+<!-- axes -->
+<g id="axes">
+  <line x1="120" y1="440" x2="880" y2="440" stroke="#1c2430" stroke-width="1.6"/>
+  <line x1="120" y1="90" x2="120" y2="440" stroke="#1c2430" stroke-width="1.6"/>
+  <g font-size="11.5" fill="#5b6673" text-anchor="end">
+    <text x="110" y="444">0%</text><text x="110" y="359">25%</text><text x="110" y="274">50%</text>
+    <text x="110" y="189">75%</text><text x="110" y="104">100%</text>
+  </g>
+  <g font-size="11.5" fill="#5b6673" text-anchor="middle">
+    <text x="120" y="461">0</text><text x="295" y="461">0.5 s</text><text x="470" y="461">1.0 s</text>
+    <text x="645" y="461">1.5 s</text><text x="820" y="461">2.0 s</text><text x="866" y="461">∞</text>
+  </g>
+  <text x="500" y="484" font-size="12.5" font-weight="600" fill="#1c2430" text-anchor="middle">per-connection lifetime L  (sampling interval T = 1 s)</text>
+  <!-- axis break before the held-open point -->
+  <path d="M840 434 l8 12 M846 434 l8 12" stroke="#8b949e" stroke-width="1.4" fill="none"/>
+</g>
+
+<!-- predicted: min(1, L/T) -->
+<g id="predicted">
+  <path d="M120 440 L470 100 L880 100" fill="none" stroke="#8b949e" stroke-width="2" stroke-dasharray="7 5"/>
+  <text x="330" y="404" font-size="12" font-weight="600" fill="#8b949e">predicted  min(1, L/T)</text>
+  <line x1="326" y1="399" x2="250" y2="332" stroke="#8b949e" stroke-width="1.1" stroke-dasharray="3 3"/>
+</g>
+
+<!-- measured -->
+<g id="measured">
+  <path d="M137.5 420.3 L225 314.9 L295 255 L470 100 L820 100 L866 100" fill="none" stroke="#2f6f9f" stroke-width="2.6"/>
+  <g fill="#2f6f9f">
+    <circle cx="137.5" cy="420.3" r="5.5"/><circle cx="225" cy="314.9" r="5.5"/><circle cx="295" cy="255" r="5.5"/>
+    <circle cx="470" cy="100" r="5.5"/><circle cx="820" cy="100" r="5.5"/><circle cx="866" cy="100" r="5.5"/>
+  </g>
+  <g font-size="12" font-weight="700" fill="#2f6f9f">
+    <text x="158" y="422">5.8%</text><text x="236" y="309">36.8%</text><text x="306" y="249">54.4%</text>
+    <text x="470" y="88" text-anchor="middle">100.0%</text><text x="820" y="88" text-anchor="middle">100.0%</text>
+  </g>
+  <g font-size="10.5" fill="#5b6673">
+    <text x="158" y="436">~50 ms</text><text x="236" y="325">300 ms</text><text x="306" y="265">500 ms</text>
+    <text x="866" y="122" text-anchor="middle" font-size="10.5">held open</text>
+  </g>
+</g>
+
+<!-- annotations -->
+<g id="annotations">
+  <!-- fires / does not fire zones -->
+  <rect x="120" y="90" width="18" height="350" fill="#b0392f" opacity="0.08"/>
+  <text x="148" y="186" font-size="11.5" font-weight="700" fill="#b0392f">does not fire</text>
+  <text x="148" y="201" font-size="11" fill="#5b6673">0 of 3 runs at ~50 ms</text>
+  <line x1="143" y1="210" x2="143" y2="408" stroke="#b0392f" stroke-width="1" stroke-dasharray="3 4" opacity="0.55"/>
+
+  <line x1="470" y1="100" x2="470" y2="440" stroke="#2f7d54" stroke-width="1.2" stroke-dasharray="4 4"/>
+  <text x="480" y="404" font-size="11.5" font-weight="700" fill="#2f7d54">L = T · saturation</text>
+  <text x="480" y="419" font-size="11" fill="#5b6673">error at this boundary: +0.0 pp</text>
+
+  <text x="560" y="180" font-size="11.5" fill="#1c2430">Measured runs 4–7 pp <tspan font-weight="700">above</tspan> prediction below saturation.</text>
+  <text x="560" y="197" font-size="11.5" fill="#5b6673">Effective lifetime is L + handshake and send overhead</text>
+  <text x="560" y="212" font-size="11.5" fill="#5b6673">(~50–70 ms): (0.30 + 0.07)/1 = 37% vs 36.8% measured.</text>
+
+  <g font-size="11.5">
+    <line x1="560" y1="238" x2="588" y2="238" stroke="#8b949e" stroke-width="2" stroke-dasharray="7 5"/>
+    <text x="596" y="242" fill="#5b6673">prediction, written down before the run</text>
+    <line x1="560" y1="258" x2="588" y2="258" stroke="#2f6f9f" stroke-width="2.6"/>
+    <text x="596" y="262" fill="#5b6673">measured</text>
+  </g>
+</g>
+
+<!-- threshold implication -->
+<g id="threshold-table">
+  <line x1="40" y1="508" x2="960" y2="508" stroke="#d3d8de"/>
+  <text x="40" y="532" font-size="13" font-weight="700" fill="#1c2430">What that does to a fixed threshold: firing needs <tspan font-family="ui-monospace,Menlo,monospace">real destinations × min(1, L/T) ≥ 20</tspan></text>
+  <g font-size="12.5">
+    <text x="40" y="562" fill="#5b6673">connection lifetime</text>
+    <text x="300" y="562" font-weight="700" fill="#1c2430">≥ 1 s</text>
+    <text x="430" y="562" font-weight="700" fill="#1c2430">500 ms</text>
+    <text x="560" y="562" font-weight="700" fill="#1c2430">300 ms</text>
+    <text x="690" y="562" font-weight="700" fill="#1c2430">~50 ms</text>
+    <text x="40" y="584" fill="#5b6673">real destinations needed</text>
+    <text x="300" y="584" font-weight="700" fill="#2f7d54">~20</text>
+    <text x="430" y="584" font-weight="700" fill="#b07d0a">~37</text>
+    <text x="560" y="584" font-weight="700" fill="#b07d0a">~54</text>
+    <text x="690" y="584" font-weight="700" fill="#b0392f">~345</text>
+  </g>
+  <text x="40" y="612" font-size="11.5" fill="#1c2430"><tspan font-weight="700">Which way this cuts:</tspan> the faster the fan-out, the less of it I see — and a scanner is fast. Raising the poll rate does not fix a 50 ms window;</text>
+  <text x="40" y="630" font-size="11.5" fill="#1c2430">at 0.5 s you still miss ~90% of it. The blind spot is fan-out that is <tspan font-style="italic">small and fast</tspan>, not broad scanning: 9,000 targets clears the bar even at 5.8%.</text>
+</g>
+</svg>

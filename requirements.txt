@@ -1,0 +1,24 @@
+# Agent Egress Sentinel — weekend skeleton deps
+rumps>=0.4.0    # macOS menu-bar app
+# nettop + tcpdump are macOS built-ins (tcpdump needs sudo/BPF).
+# No scapy/tshark: tcpdump hands over packet bytes and tlsparse.py walks the
+# ClientHello structure itself. (It used to grep tcpdump's ASCII rendering for
+# anything hostname-shaped, which collected server certificate SANs and CA URLs
+# as though they were the client's SNI -- ROADMAP 2026-07-27.)
+# PyYAML is OPTIONAL: ai_endpoints.yaml loads via a dependency-free fallback
+# parser if pyyaml is absent, so `pip install rumps` and go still works.
+# pyyaml>=6.0   # uncomment for full YAML parsing of ai_endpoints.yaml
+#
+# --- Windows only (see PLATFORMS.md) ---------------------------------------
+# pywintrace>=0.2   # ETW byte counts; the nettop replacement
+#
+# Nothing above the capture layer needs it, and wincapture.available() is False
+# without it rather than raising. It is pure Python with no compiled extension:
+# it IS the ctypes struct marshalling for OpenTrace/ProcessTrace/TDH, already
+# correct. Hand-writing that was the alternative, and a wrong EVENT_TRACE_LOGFILE
+# layout fails as plausible garbage fields rather than as an error -- the worst
+# failure shape available in this project. So it is a dependency chosen to avoid
+# a silent-wrong-numbers risk, not to save typing.
+#
+# psutil is OPTIONAL on Windows: proctree falls back to process names without it,
+# which costs argv matching (an agent running as a bare `node`) and nothing else.

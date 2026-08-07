@@ -1,0 +1,28 @@
+# Raw captures = your machine's network fingerprint (internal IPs, EDR/VPN
+# process names, agent destination topology). NEVER commit these.
+tests/*.local.txt
+sni.jsonl
+activity.ndjson
+*.pyc
+__pycache__/
+.pytest_cache/
+docs/out/
+
+# Cross-view experiment artefacts -- same rule: a list of every host this
+# machine talked to is a network fingerprint.
+xview-a.ndjson
+xview-b.json
+aes-etw-probe.*
+
+# --- cross-view research, kept local until the write-up ---------------------
+# The three docs and the harness are one unit: the code's comments cite the
+# prereg by section, so splitting them would leave comments pointing at files
+# that are not here. Excluded together, or included together.
+PRIOR-ART.md
+RESEARCH-PROGRAM.md
+XV-PREREG.md
+xview.py
+xview_proxy.py
+xview_capture.py
+xview_report.py
+tests/test_xview.py

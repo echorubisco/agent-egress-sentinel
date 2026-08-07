@@ -1,0 +1,6 @@
+# This repo is developed on macOS and Windows. Normalise text in the index so a
+# checkout on either does not show every file as modified.
+* text=auto eol=lf
+*.sh  text eol=lf
+*.png binary
+*.svg text eol=lf

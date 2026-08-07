@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="1000" height="700" font-family="ui-sans-serif,-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
+<!-- BRIEF: Blueprint/flat-geometric companion figure for the Show HN post. The
+     measurement pipeline of Agent Egress Sentinel, top to bottom, with each of the
+     five shipped-and-wrong bugs pinned to the exact stage it lived in, plus one
+     grey marker for the sampling floor (a limit, not a bug). Thesis of the picture:
+     every failure was a stage that still ran and still produced plausible output.
+     Palette: paper #f7f8fa, ink #1c2430, slate #5b6673, blue #2f6f9f, green
+     #2f7d54, red #b0392f, grey #8b949e.
+     Stable ids: background, title, stage-1..6, badge-w1..w5, badge-floor, legend, footer. -->
+<defs>
+  <marker id="flow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+    <path d="M0 0 L10 5 L0 10 z" fill="#8b949e"/>
+  </marker>
+</defs>
+
+<rect id="background" width="1000" height="700" fill="#f7f8fa"/>
+
+<g id="title">
+  <text x="40" y="42" font-size="21" font-weight="700" fill="#1c2430">Five ways to build a monitor that quietly measures nothing</text>
+  <text x="40" y="66" font-size="13.5" fill="#5b6673">Every one of these stages still ran, and still emitted plausible alerts, while the number it produced was wrong.</text>
+</g>
+
+<!-- flow spine -->
+<line x1="250" y1="162" x2="250" y2="620" stroke="#d3d8de" stroke-width="2"/>
+<g stroke="#8b949e" stroke-width="1.6" marker-end="url(#flow)" fill="none">
+  <line x1="250" y1="162" x2="250" y2="186"/><line x1="250" y1="250" x2="250" y2="274"/>
+  <line x1="250" y1="338" x2="250" y2="362"/><line x1="250" y1="426" x2="250" y2="450"/>
+  <line x1="250" y1="514" x2="250" y2="538"/><line x1="250" y1="602" x2="250" y2="620"/>
+</g>
+
+<!-- ===== stage 1 ACQUIRE ===== -->
+<g id="stage-1">
+  <rect x="40" y="100" width="420" height="62" rx="6" fill="#ffffff" stroke="#d3d8de"/>
+  <text x="58" y="124" font-size="12" font-weight="700" fill="#2f6f9f">1 · ACQUIRE</text>
+  <text x="58" y="146" font-size="12.5" fill="#1c2430">streaming <tspan font-family="ui-monospace,Menlo,monospace">nettop -L 0 -s 1</tspan> — cumulative per-connection counters</text>
+  <circle id="badge-w1" cx="484" cy="118" r="13" fill="#b0392f"/><text x="484" y="122" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">1</text>
+  <circle id="badge-floor" cx="484" cy="148" r="13" fill="#8b949e"/><text x="484" y="152" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">L/T</text>
+</g>
+
+<!-- ===== stage 2 NAME ===== -->
+<g id="stage-2">
+  <rect x="40" y="188" width="420" height="62" rx="6" fill="#ffffff" stroke="#d3d8de"/>
+  <text x="58" y="212" font-size="12" font-weight="700" fill="#2f6f9f">2 · NAME</text>
+  <text x="58" y="234" font-size="12.5" fill="#1c2430"><tspan font-family="ui-monospace,Menlo,monospace">tcpdump</tspan> → parse ClientHello <tspan font-family="ui-monospace,Menlo,monospace">server_name</tspan> → IP→domain cache</text>
+  <circle id="badge-w4" cx="484" cy="219" r="13" fill="#b0392f"/><text x="484" y="223" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">4</text>
+</g>
+
+<!-- ===== stage 3 ACCOUNT ===== -->
+<g id="stage-3">
+  <rect x="40" y="276" width="420" height="62" rx="6" fill="#ffffff" stroke="#d3d8de"/>
+  <text x="58" y="300" font-size="12" font-weight="700" fill="#2f6f9f">3 · ACCOUNT</text>
+  <text x="58" y="322" font-size="12.5" fill="#1c2430">delta = current − previous, per (process, pid, destination)</text>
+  <circle id="badge-w2" cx="484" cy="307" r="13" fill="#b0392f"/><text x="484" y="311" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">2</text>
+</g>
+
+<!-- ===== stage 4 DETECT ===== -->
+<g id="stage-4">
+  <rect x="40" y="364" width="420" height="62" rx="6" fill="#ffffff" stroke="#d3d8de"/>
+  <text x="58" y="388" font-size="12" font-weight="700" fill="#2f6f9f">4 · DETECT</text>
+  <text x="58" y="410" font-size="12.5" fill="#1c2430">volume ledger (5 MB burst) · breadth counter (≥20 dests) · reconciler</text>
+  <circle id="badge-w3" cx="484" cy="380" r="13" fill="#b0392f"/><text x="484" y="384" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">3</text>
+  <circle id="badge-w5" cx="484" cy="410" r="13" fill="#b0392f"/><text x="484" y="414" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">5</text>
+</g>
+
+<!-- ===== stage 5 ATTRIBUTE ===== -->
+<g id="stage-5">
+  <rect x="40" y="452" width="420" height="62" rx="6" fill="#ffffff" stroke="#d3d8de"/>
+  <text x="58" y="476" font-size="12" font-weight="700" fill="#2f6f9f">5 · ATTRIBUTE</text>
+  <text x="58" y="498" font-size="12.5" fill="#1c2430">unmatched process walks its ancestors → alert reads “claude via git”</text>
+</g>
+
+<!-- ===== stage 6 ALERT ===== -->
+<g id="stage-6">
+  <rect x="40" y="540" width="420" height="62" rx="6" fill="#ffffff" stroke="#2f7d54" stroke-width="1.8"/>
+  <text x="58" y="564" font-size="12" font-weight="700" fill="#2f7d54">6 · ALERT</text>
+  <circle cx="64" cy="582" r="6" fill="#2f7d54"/><text x="76" y="586" font-size="11.5" fill="#1c2430">quiet</text>
+  <circle cx="116" cy="582" r="6" fill="#c8890f"/><text x="128" y="586" font-size="11.5" fill="#1c2430">unnameable destination</text>
+  <circle cx="264" cy="582" r="6" fill="#b0392f"/><text x="276" y="586" font-size="11.5" fill="#1c2430">volume to a non-AI endpoint</text>
+</g>
+
+<!-- ===== legend ===== -->
+<g id="legend">
+  <text x="560" y="90" font-size="12" font-weight="700" fill="#b0392f">WHAT BROKE, AND WHERE</text>
+
+  <text x="560" y="118" font-size="12.5" font-weight="700" fill="#1c2430">1 · granularity mismatch</text>
+  <text x="560" y="135" font-size="11.5" fill="#5b6673">Bytes were per-process, hostnames were per-process,</text>
+  <text x="560" y="150" font-size="11.5" fill="#5b6673">and I joined them → “claude sent 6 MB to sentry.io”.</text>
+  <text x="560" y="165" font-size="11.5" fill="#b0392f">A false accusation on the main path.</text>
+
+  <text x="560" y="196" font-size="12.5" font-weight="700" fill="#1c2430">4 · the parser read the server’s certificate</text>
+  <text x="560" y="213" font-size="11.5" fill="#5b6673">ASCII grep over any handshake record harvested the</text>
+  <text x="560" y="228" font-size="11.5" fill="#5b6673">cert SAN list and the CA’s own URLs. One connection</text>
+  <text x="560" y="243" font-size="11.5" fill="#5b6673">to example.com produced 33 “hostnames”.</text>
+
+  <text x="560" y="274" font-size="12.5" font-weight="700" fill="#1c2430">2 · first sighting only set a baseline</text>
+  <text x="560" y="291" font-size="11.5" fill="#5b6673">A short connection is seen once, so it contributed 0.</text>
+  <text x="560" y="306" font-size="11.5" fill="#b0392f">94.2% of new-flow outbound bytes discarded → 0.0%.</text>
+  <text x="560" y="321" font-size="11.5" fill="#5b6673">34 of 40 new flows counted literally nothing.</text>
+
+  <text x="560" y="352" font-size="12.5" font-weight="700" fill="#1c2430">3 · the breadth detector recorded nothing</text>
+  <text x="560" y="369" font-size="11.5" fill="#5b6673">Same accounting root cause — plus my own harness</text>
+  <text x="560" y="384" font-size="11.5" fill="#5b6673">error: 25 <tspan font-family="ui-monospace,Menlo,monospace">curl</tspan> processes, one destination each, and</text>
+  <text x="560" y="399" font-size="11.5" fill="#5b6673">the counter is strictly per process. Untriggerable.</text>
+
+  <text x="560" y="430" font-size="12.5" font-weight="700" fill="#1c2430">5 · the noise floor deleted the signal</text>
+  <text x="560" y="447" font-size="11.5" fill="#5b6673">“Ignore anything under 64 KB” — but a credentials</text>
+  <text x="560" y="462" font-size="11.5" fill="#5b6673">file is ~4 KB and an SSH key 2–3 KB. Blind to the only</text>
+  <text x="560" y="477" font-size="11.5" fill="#b0392f">payload class it existed for, with a test pinning it.</text>
+
+  <text x="560" y="508" font-size="12.5" font-weight="700" fill="#8b949e">L/T · not a bug — the sampling floor</text>
+  <text x="560" y="525" font-size="11.5" fill="#5b6673">A flow whose whole life falls between two samples</text>
+  <text x="560" y="540" font-size="11.5" fill="#5b6673">never enters the pipeline at all. Recall = min(1, L/T).</text>
+  <text x="560" y="555" font-size="11.5" fill="#5b6673">A faster poll does not close it; flow events would.</text>
+</g>
+
+<g id="footer">
+  <line x1="40" y1="632" x2="960" y2="632" stroke="#d3d8de"/>
+  <text x="40" y="656" font-size="12.5" fill="#1c2430"><tspan font-weight="700">The pattern behind 2, 3 and 5:</tspan> a control that suppresses by discarding, and a detector that does not work, are indistinguishable from the outside.</text>
+  <text x="40" y="678" font-size="11.5" fill="#5b6673">That module had ten suppression controls and every one of them was a <tspan font-family="ui-monospace,Menlo,monospace">continue</tspan>. Unit tests never caught any of this — the end-to-end run did.</text>
+</g>
+</svg>

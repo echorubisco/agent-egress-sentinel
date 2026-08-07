@@ -1,0 +1,91 @@
+# AI Agent Egress Sentinel — known AI endpoints allowlist
+#
+# ALLOWLIST, not a blocklist. A stale entry false-positives on a new legit
+# endpoint (not a missed threat) — maintenance is "keep up with legit
+# endpoints," closer to a public-suffix / ad-filter list than a virus DB.
+#
+# ⚠️ SEED DATA IS FROM MEMORY AND UNVERIFIED. Before launch, REPLACE it with a
+#    real harvest: run sni_sniffer + each agent doing real work ~10 min, then
+#    `python3 harvest.py` and sort the observed domains in here. The known trap:
+#    Cursor's codebase indexing/sync is the biggest legit AI flow on a dev Mac
+#    and uses more than api2.cursor.sh — miss it and every Cursor user's first
+#    big index fires the hero false-positive. Acceptance gate: each supported
+#    agent working 1 hour => ZERO red alerts.
+#
+# GOVERNANCE (community asset = poisoning surface; an allowlist hit is a blind
+# spot): a PR without an official-documentation link for the endpoint is NOT
+# merged. No exceptions.
+#
+# Two match kinds:
+#   providers.<name>: exact hostnames
+#   patterns:         a single '*' matching EXACTLY ONE dns label, for
+#                     un-enumerable/rotating hosts. Each MUST carry a doc link.
+
+version: "2026-07-25-PARTIAL"   # kiro + github_copilot are OFFICIAL-DOC verified;
+                                # everything else is still memory-seed pending harvest.
+
+providers:
+  anthropic:
+    - api.anthropic.com
+    # Claude Code telemetry POSTs to api.anthropic.com/api/claude_code/metrics —
+    # same host, no separate telemetry domain confirmed (reverse-eng gist v2.1.143,
+    # 2026-06). "Statsig/Sentry" appear only as doc strings in 2.1.x.
+  openai:
+    - api.openai.com
+    - api.chatgpt.com
+  xai:
+    - api.x.ai
+    # NOTE(2026-07-25): the Grok Build exfil went to a GCS bucket
+    # (storage.googleapis.com) — a NON-allowlisted destination. Do NOT add
+    # generic cloud-storage domains here; that hole is exactly what the red
+    # path exists to catch.
+  google:
+    - generativelanguage.googleapis.com
+    - aiplatform.googleapis.com
+  github_copilot:
+    # OFFICIAL: https://docs.github.com/en/copilot/reference/copilot-allowlist-reference
+    - api.githubcopilot.com
+    - copilot-proxy.githubusercontent.com
+    - origin-tracker.githubusercontent.com
+    - copilot-telemetry.githubusercontent.com
+    - collector.github.com
+    - default.exp-tas.com
+  kiro:
+    # OFFICIAL: https://kiro.dev/docs/cli/privacy-and-security/firewalls/ (2026-05-27)
+    - q.us-east-1.amazonaws.com
+    - q.eu-central-1.amazonaws.com
+    - runtime.us-east-1.kiro.dev
+    - runtime.eu-central-1.kiro.dev
+    - telemetry.us-east-1.kiro.dev
+    - telemetry.eu-central-1.kiro.dev
+    - prod.us-east-1.telemetry.desktop.kiro.dev
+    - prod.us-east-1.auth.desktop.kiro.dev
+    - management.us-east-1.kiro.dev
+    - management.eu-central-1.kiro.dev
+    - app.kiro.dev
+  cursor:
+    - api.cursor.sh
+    - api2.cursor.sh
+    # TODO(harvest): indexing/sync endpoint(s) — official enterprise allowlist page
+    # exists (cursor.com/security -> /docs/enterprise/network-configuration) but the
+    # indexing subdomain was NOT reliably confirmed (2026-07-25); measure, don't guess.
+
+# Constrained single-segment wildcards for endpoints that can't be enumerated.
+# '*' matches exactly one label (no dots). Every entry needs a doc link in the PR.
+# ⚠️ SECURITY: these are SHARED / customer-subdomain endpoints — anyone can stand
+#    up their own tenant (exfil.openai.azure.com) and hit this allowlist. The
+#    metadata layer CANNOT distinguish your tenant from an attacker's. This is the
+#    #1 argument for paid-tier content inspection; keep it named in the README.
+patterns:
+  - "*.openai.azure.com"                     # Azure OpenAI: <resource>.openai.azure.com
+  - "bedrock-runtime.*.amazonaws.com"        # AWS Bedrock: region-rotating
+  - "*-aiplatform.googleapis.com"            # Vertex regional (verify exact shape on harvest)
+
+# Agent identification (detection content, governed + hot-reloaded like the
+# endpoint list). A process is treated as an AI agent when its nettop name OR
+# argv contains one of these whole tokens (token match, not substring).
+# 'confusables' are excluded even if they contain an agent token as a substring
+# ('ngrok http ...' contains 'grok'). Add a token here, not in Python.
+agents:
+  tokens: [claude, cursor, codex, aider, grok, gemini, copilot, cline, kiro, windsurf]
+  confusables: [ngrok]
