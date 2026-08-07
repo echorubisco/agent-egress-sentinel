@@ -578,7 +578,12 @@ class Sampler(threading.Thread):
                 # telemetry-SDK false positive that the ai/nonai split exists to
                 # kill, and without a proxy configured there is no invariant to
                 # test, so nothing changes at all.
-                if self.recon.proxy:
+                # `self.recon.active` FIRST. `is_agent=` is an argument, so it
+                # is evaluated before observe() can reach its own inactive
+                # guard -- which made a disabled feature pay for an ancestry
+                # walk per flow. See the P1-D note below and
+                # tests/test_observe_cost.py.
+                if self.recon.active and self.recon.proxy:
                     rn = names.get(pid, "")
                     self.recon.observe(pid, dest, delta, now, name=rn,
                                        is_agent=bool(self._agent_for(rn, pid)[0]))
@@ -602,9 +607,18 @@ class Sampler(threading.Thread):
             # path -- floor 0 -> 64 KB, which is blind to exactly the credential-
             # sized payloads this module exists for. `_agent_for` is cached per
             # (name, pid), so this costs one ancestry walk per pid, not per flow.
-            rname = names.get(pid, "")
-            self.recon.observe(pid, dest, delta, now, name=rname,
-                               is_agent=bool(self._agent_for(rname, pid)[0]))
+            # Guarded on `active` because `is_agent=` is an ARGUMENT: it is
+            # evaluated before observe() runs, so its own `if not self._active:
+            # return` came too late and the ancestry walk was paid for on every
+            # flow while reconciliation was off -- which is the default state,
+            # nothing writes the contract yet. Measured at 40 walks per 40
+            # browser flows. That silently undid "P1-D preserved: cheap
+            # ledger/heuristic checks BEFORE the ps fork", and its cost scales
+            # with pid churn, which is precisely the workload this tool targets.
+            if self.recon.active:
+                rname = names.get(pid, "")
+                self.recon.observe(pid, dest, delta, now, name=rname,
+                                   is_agent=bool(self._agent_for(rname, pid)[0]))
 
         per_pid = aggregate_flows(flows, self.baseline,
                                   self.sni.domain_for_ip, ALLOW.matches,

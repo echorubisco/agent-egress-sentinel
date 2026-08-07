@@ -23,7 +23,13 @@ import json
 VERSION = "0.1.0"
 # One string, used everywhere. Set it when the repo goes public -- PRE-FLIGHT.md
 # has the one-liner that rewrites every occurrence in the tree.
-REPO = "YOUR-GITHUB-USER/agent-egress-sentinel"
+REPO = "echorubisco/agent-egress-sentinel"
+#   NOTE: while the repo is PRIVATE, raw.githubusercontent.com returns 404
+#   for this URL and the check logs "update check skipped: HTTP Error 404".
+#   That is the intended degradation, not a failure: the SELF-EGRESS line is
+#   written BEFORE the request unconditionally, so "we log our own outbound
+#   connection" still holds -- only the version comparison is inert until the
+#   repo goes public.
 UPDATE_URL = f"https://raw.githubusercontent.com/{REPO}/main/version.json"
 TIMEOUT = 5
 

@@ -15,13 +15,21 @@ here that damages a user.** Everything else can be fixed after publishing.
 
 ## 1. One substitution before the repo goes public
 
-```bash
-grep -rl 'YOUR-GITHUB-USER' . | xargs sed -i '' 's|YOUR-GITHUB-USER|<your-gh-handle>|g'
-```
+~~`grep -rl 'YOUR-GITHUB-USER' …`~~ **Done 2026-08-07.** `update_ping.py` now
+carries the real handle. Two references remain in prose (this file and
+SHOW-HN-DRAFT) where the token is being *discussed*, not used.
 
-That is the whole set. `update_ping.py` derives its URL from it, and the README's
-contact link is a GitHub-relative `../../issues/new`, so nothing else needs an
-absolute URL. (Drop the `''` after `-i` on GNU sed.)
+It was still a placeholder when the repo was first pushed — this item had been
+listed as "the one substitution before going public" for three weeks and was
+missed at the moment it applied. Consequence was small (a 404'd version check),
+but the README's contact link is a GitHub-relative `../../issues/new`, so nothing
+else needed an absolute URL and this was genuinely the whole set.
+
+**While the repo is private the version check still 404s**, by construction:
+`raw.githubusercontent.com` will not serve a private file. That is inert, not
+broken — the SELF-EGRESS line is logged before the request regardless, so "we log
+our own outbound connection" holds either way. It starts working when the repo
+goes public.
 
 ---
 
@@ -90,7 +98,7 @@ Caveats, so the first number is read correctly:
 - SIGSTOP-and-resume inside the 15 s dead-man window, and the sibling-process
   confused deputy, are documented and not closable at this privilege level.
 - **The Windows port is half-built and its half is live-verified.** As of
-  2026-08-06 the suite is **19 of 19 files, 268 assertions, green on Windows**
+  2026-08-06 the suite is **20 of 20 files, 305 executed assertions, green on Windows**
   (was 3 of 13 — ten of those were a single `import pwd` in `paths.py`, the last
   was `tcpdump -r`). Byte counts work: `wincapture.py` reads ETW and was verified
   against a real 20 s elevated capture. Offline pcap replay runs anywhere.

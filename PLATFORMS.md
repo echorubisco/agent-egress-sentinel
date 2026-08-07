@@ -26,7 +26,9 @@ both come from macOS-specific tools. Nothing above them cares what OS it is on.
 | **Live hostname capture** | ✅ `tcpdump` SNI | ❌ | still the gap — §5 step 2 |
 | Menu bar / tray UI | ✅ `rumps` | ❌ | `pystray` is the equivalent; small |
 
-Test suite on Windows: **19 of 19 files green, 268 assertions.** It was 3 of 13
+Test suite on Windows: **20 of 20 files green, 305 executed assertions**
+(318 `check()` call sites in source; the difference is loops and dead branches,
+and the executed count is the one quoted everywhere because it is what ran). It was 3 of 13
 this morning — ten of those failures were one `import pwd` in `paths.py`, and the
 last was `tcpdump -r` on the offline path.
 
