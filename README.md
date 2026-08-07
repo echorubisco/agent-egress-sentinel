@@ -45,12 +45,29 @@ is only that we assumed the containment was solid.
 
 **Two honest limits on that framing, before you read further.**
 
-First, we don't know why that incident went unnoticed. Public reporting
-establishes a delay; it does not tell us what telemetry OpenAI had. One published
-analysis offers a different explanation entirely — dozens of benchmarks running
-concurrently with effectively unlimited token budgets, so the signal was drowned
-rather than absent. We cite Ptacek for "the capability is commodity", which is
-what he actually said, and nothing more.
+First — and this is the version that is worst for the argument this tool makes,
+which is why it replaced an earlier paragraph of speculation here. Hugging Face
+published a [first-party forensic
+timeline](https://huggingface.co/blog/agent-intrusion-technical-timeline)
+(~17,600 attacker actions, 2026-07-09 02:28 → 07-13 14:14 UTC), and it answers
+the question directly:
+
+> "The first signals came from several layers of our security stack at once: live
+> runtime analysis, SIEM logs, and others." … "on their own, each was ambiguous"
+> … it "failed to correctly raise the alert's criticality and trigger the on-call
+> team, costing precious time in the response."
+
+**The telemetry existed and it fired.** What broke was turning individually
+ambiguous observations into a judgement. So "more egress visibility" would not
+have helped there — visibility was not the missing part.
+
+Worse for us specifically: *"on their own, each was ambiguous"* is the same wall
+this tool's own reasoning runs into. Individually ambiguous observations are
+exactly what a metadata-layer monitor produces. That is the honest reading, and
+it belongs at the top rather than buried.
+
+We cite Ptacek for "the capability is commodity", which is what he actually said,
+and nothing more.
 
 Second, **this tool would not have caught that incident, even in principle.** It
 decides "is this an agent" by matching a fixed token list against a process's own
@@ -443,6 +460,14 @@ meaningful under proxy mode. Off unless you opt in.
   seen it is still genuinely silent.
 - **An unresolved destination is an IP**, which can never match a declared host,
   so the check degrades to pid-presence only.
+- **One declaration buys a 300-second window on that host** (`WINDOW_SEC`). A
+  single `WebFetch` of `raw.githubusercontent.com` therefore explains *any*
+  volume to that host for the next five minutes, and the re-report suppression
+  runs on the same 300 s. Listed here because the value is the defeat: this is
+  the only check in the repo that is not a threshold, and a window is a
+  threshold in the time axis. It is kept loose because a tool call and the bytes
+  it causes are not simultaneous, and no measurement exists yet to tighten it —
+  which is what the real-machine false-positive run in PRE-FLIGHT §3 is for.
 
 **Two gaps a review panel found on 2026-08-03 that were undocumented and are
 not closable at this privilege level.** First, **suspend-and-resume**: `SIGSTOP`
