@@ -281,7 +281,7 @@ internet-access paths *before* the run and monitors second, though it does name
 is also not an unforgeable measurer: anything running as you can kill this app. So the
 claim is not "trust this instead" but "**if you're going to gate agents on declared
 intent, something outside the agent should be counting the bytes**" — and this is a
-3,500-line version of that something. Watching is still the cheapest layer here, not
+4,100-line version of that something. Watching is still the cheapest layer here, not
 the strongest one.
 
 
@@ -295,7 +295,7 @@ and part harvested from my own captures. Every entry should have a source link.
 If you use an agent that isn't covered, a PR with a source is worth more to this
 than a star.
 
-Repo (Apache-2.0, ~3,500 lines of Python plus ~2,600 of tests):
+Repo (Apache-2.0, ~4,100 lines of Python plus ~3,300 of tests):
 `https://github.com/YOUR-GITHUB-USER/agent-egress-sentinel`
 
 It's rough on purpose — the thing I need is whether the alerts are *right*, and I

@@ -90,7 +90,7 @@ Caveats, so the first number is read correctly:
 - SIGSTOP-and-resume inside the 15 s dead-man window, and the sibling-process
   confused deputy, are documented and not closable at this privilege level.
 - **The Windows port is half-built and its half is live-verified.** As of
-  2026-08-06 the suite is **15 of 15 files, 245 assertions, green on Windows**
+  2026-08-06 the suite is **19 of 19 files, 268 assertions, green on Windows**
   (was 3 of 13 — ten of those were a single `import pwd` in `paths.py`, the last
   was `tcpdump -r`). Byte counts work: `wincapture.py` reads ETW and was verified
   against a real 20 s elevated capture. Offline pcap replay runs anywhere.
@@ -123,5 +123,5 @@ Caveats, so the first number is read correctly:
 - Placeholders `<your-form-link>`, `<your-worker>` and `<repo-url>` are gone.
   What used to be four independent tokens is now one, `YOUR-GITHUB-USER`, in two
   functional places (`update_ping.py`, the writeup's repo line) — see §1.
-- Line counts in README/writeup corrected (~3,500 Python + ~2,800 tests, was
+- Line counts in README/writeup corrected (~4,100 Python + ~3,300 tests, was
   "~2,600 plus ~2,200").

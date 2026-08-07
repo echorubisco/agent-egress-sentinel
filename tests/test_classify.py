@@ -23,6 +23,27 @@ FIX = pathlib.Path(__file__).resolve().parent / "nettop_sample.txt"
 fails = []
 
 
+def dests(flows):
+    """{(name, pid, ip): total_out} from the connection-keyed flow dict.
+
+    Flow keys became (name, pid, ip, conn) on 2026-08-07 so that the byte delta
+    is taken per connection -- summing concurrent connections before the delta
+    let a closing connection manufacture egress (tests/test_conn_expiry.py).
+    These assertions are about parsing and attribution, not key arity, so they
+    collapse to the destination here.
+    """
+    out = {}
+    for k, v in flows.items():
+        d = (k[0], k[1], k[2])
+        o = v.out if hasattr(v, "out") else v
+        i = v.inb if hasattr(v, "inb") else 0
+        p = out.get(d, (0, 0))
+        out[d] = (p[0] + o, p[1] + i)
+    return out
+
+
+
+
 def check(cond, msg):
     print(("PASS" if cond else "FAIL"), "-", msg)
     if not cond:
@@ -76,11 +97,11 @@ check(bool(c) and c["ai"] == 1000 and c["nonai"] == 0,
       "claude's api.anthropic.com bytes -> ai bucket, zero nonai")
 
 # 6) orphan after garbage row NOT attributed to claude
-check(("claude", "100", "192.0.2.99") not in flows,
+check(("claude", "100", "192.0.2.99") not in dests(flows),
       "orphan 192.0.2.99 (after garbage row) not attached to claude")
 
 # 7) IPv6 dot-port parsed to the bare address
-check(("someproc", "300", "2001:db8::1") in flows,
+check(("someproc", "300", "2001:db8::1") in dests(flows),
       "IPv6 dot-port ('2001:db8::1.443') parsed to '2001:db8::1'")
 
 # 8) the -n flag guard (the whole join depends on it)

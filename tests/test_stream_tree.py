@@ -26,6 +26,27 @@ from sentinel import NettopStream                                   # noqa: E402
 fails = []
 
 
+def dests(flows):
+    """{(name, pid, ip): total_out} from the connection-keyed flow dict.
+
+    Flow keys became (name, pid, ip, conn) on 2026-08-07 so that the byte delta
+    is taken per connection -- summing concurrent connections before the delta
+    let a closing connection manufacture egress (tests/test_conn_expiry.py).
+    These assertions are about parsing and attribution, not key arity, so they
+    collapse to the destination here.
+    """
+    out = {}
+    for k, v in flows.items():
+        d = (k[0], k[1], k[2])
+        o = v.out if hasattr(v, "out") else v
+        i = v.inb if hasattr(v, "inb") else 0
+        p = out.get(d, (0, 0))
+        out[d] = (p[0] + o, p[1] + i)
+    return out
+
+
+
+
 def check(cond, msg):
     print(("PASS" if cond else "FAIL"), "-", msg)
     if not cond:
@@ -58,12 +79,24 @@ snap = s.snapshot(now=1000.0)
 check(s._byte_idx == 5, "bytes_out column located from the streamed header")
 check(s._in_idx == 4, "bytes_in column located from the streamed header")
 # fixture column order is bytes_in,bytes_out -> conn1 is in=1000/out=700,
-# conn2 is in=500/out=300. BOTH counters must sum.
-check(snap.get(("curl", "500", "203.0.113.7")) == (700 + 300, 1000 + 500),
-      "concurrent conns to one dest SUM both counters (out 700+300, in 1000+500)")
+# conn2 is in=500/out=300.
+#
+# REWRITTEN 2026-08-07. This used to assert that snapshot() SUMMED the two
+# connections -- which is the behaviour that was removed, because summing before
+# the delta let a closing connection manufacture egress (test_conn_expiry.py).
+# A passing test had pinned the bug in place, exactly as the MIN_BYTES=64KB
+# assertion did in the reconciler. The invariant that mattered was never
+# "snapshot sums"; it was "no bytes are lost when one process holds two
+# connections to one destination", and that now holds one layer down.
+check(len([k for k in snap if k[:3] == ("curl", "500", "203.0.113.7")]) == 2,
+      "concurrent conns to one dest are kept as TWO keys, so the delta is taken "
+      "per connection (summing them here is what manufactured egress)")
+check(dests(snap)[("curl", "500", "203.0.113.7")] == (700 + 300, 1000 + 500),
+      "and no bytes are lost: collapsed by destination both counters still add "
+      "up (out 700+300, in 1000+500)")
 check(not any(k[2] in ("localhost", "127.0.0.1") for k in snap),
       "loopback connection dropped (local model traffic stays local)")
-check(("someproc", "700", "2001:db8::9") in snap,
+check(("someproc", "700", "2001:db8::9") in dests(snap),
       "IPv6 dot-port ('2001:db8::9.443') parsed to the bare address")
 check(not any(k[2] == "203.0.113.99" for k in snap),
       "orphan connection after a garbage row is NOT attributed to the prior proc")

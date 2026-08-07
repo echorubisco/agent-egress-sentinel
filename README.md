@@ -178,7 +178,7 @@ fired regardless; see ROADMAP). Two things still follow from sampling at all:
 
 The one `sudo` is the entire trust-ask: `tcpdump` needs BPF to read connection
 metadata. Far smaller than the root-CA install a TLS-inspecting tool demands —
-and we're open source, read the ~3,500 lines.
+and we're open source, read the ~4,100 lines.
 
 ![The measurement pipeline stage by stage, with each of the five shipped-and-wrong bugs pinned to the stage it lived in, plus the sampling floor marked as a limit rather than a bug](docs/agent-egress-pipeline-blueprint.svg)
 

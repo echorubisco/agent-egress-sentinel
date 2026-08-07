@@ -250,6 +250,14 @@ class Reconciler:
                             else os.environ.get(self.PROXY_ENV, "")) or None
 
     # --- novelty -------------------------------------------------------------
+    @property
+    def proxy(self):
+        """The configured proxy host, or None. Public because sentinel decides
+        whether to forward allowlisted flows here based on it: under proxy mode
+        the structural invariant outranks the allowlist, otherwise it does not
+        exist and forwarding them would only add noise."""
+        return self._proxy
+
     def _is_novel(self, dest, now):
         """Has any agent-lineage flow gone to this destination before?
 
@@ -372,13 +380,29 @@ class Reconciler:
                 out.append((ts, dpid, tool, host, nb))
         return out
 
-    def observe(self, pid, dest, nbytes, now=None, name=""):
+    def observe(self, pid, dest, nbytes, now=None, name="", is_agent=True):
         """Feed one non-AI egress delta. No verdict here -- see drain().
 
         `name` is carried so a verdict can still be attributed after the flow has
         gone quiet: the process may no longer appear in any later snapshot, and
         the whole point of the settle delay is that the verdict lands on a LATER
         tick than the bytes.
+
+        `is_agent` gates exactly ONE thing: whether this destination seeds the
+        novelty baseline. Added 2026-08-07 after external review. This method is
+        handed EVERY non-AI flow on the machine -- browsers, EDR, OS telemetry --
+        and `_seen_dests` was written unconditionally, so a host Chrome had
+        touched became "known" to the agent path and its floor rose from
+        NOVEL_MIN_BYTES (0) to KNOWN_MIN_BYTES (64 KB). Measured: an agent's 4 KB
+        credential POST to such a host went from reported to discarded. That is
+        the MIN_BYTES=64KB blindness a second time -- blind to the one payload
+        class this module exists for -- grown inside that bug's own fix, on the
+        ungated side of a root cause ROADMAP 2026-08-02 had already written down.
+
+        Defaults True: a caller that does not know the lineage keeps the old
+        behaviour, because a baseline that silently stops being seeded is a
+        change in the other direction. sentinel passes the cached `_agent_for`
+        verdict. See tests/test_novelty_gate.py.
         """
         if not self._active or nbytes <= 0:
             return
@@ -395,7 +419,8 @@ class Reconciler:
             rec[2] = now
             if name:
                 rec[3] = name
-        self._seen_dests[dest] = now
+        if is_agent:
+            self._seen_dests[dest] = now
 
     def drain(self, now=None, ancestors=proctree.ancestors):
         """[(pid, name, dest, bytes, note), ...] for every SETTLED unexplained flow.

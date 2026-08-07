@@ -248,15 +248,15 @@ def parse_flows(text: str):
                     bi = int(cols[in_idx]) if cols[in_idx].strip() else 0
                 except ValueError:
                     bi = 0
-            key = (cur[0], cur[1], ip)
-            # += : one process can hold several connections to the SAME dest
-            # (real fixture: Slack had 2 conns to one EC2). '=' dropped bytes.
-            # Caveat: these are cumulative counters; when a big conn closes and a
-            # new one to the same ip opens, one tick's delta may undercount --
-            # acceptable vs permanently dropping a concurrent connection.
-            prev = flows.get(key)
-            flows[key] = (Bytes(prev.out + b, prev.inb + bi) if prev
-                          else Bytes(b, bi))
+            # Keyed by the FULL connection row, not by destination. One process
+            # can hold several connections to the same dest (real fixture: Slack
+            # had 2 conns to one EC2); this used to `+=` them here, which dropped
+            # no bytes but moved the delta above the aggregation and so let a
+            # closing connection manufacture egress -- see NettopStream.snapshot
+            # and tests/test_conn_expiry.py. A distinct key per connection makes
+            # the delta per connection, which is the granularity the counters
+            # actually have.
+            flows[(cur[0], cur[1], ip, c1)] = Bytes(b, bi)
         else:                                             # candidate process row
             name, _, pid = c1.rpartition(".")
             cur = (name, pid) if (name and pid.isdigit()) else None
@@ -290,9 +290,14 @@ def aggregate_flows(flows, baseline, resolve_domain, is_ai, observe=None, warmup
     """
     per_pid = collections.defaultdict(
         lambda: {"ai": 0, "nonai": 0, "unresolved": 0, "in": 0, "dests": {}})
-    for (name, pid, ip), total in flows.items():
+    for key, total in flows.items():
+        # Keys are (name, pid, ip, conn). A 3-tuple is still accepted so that
+        # classification tests can state one flow without inventing a connection
+        # string -- but it cannot express two connections to one destination,
+        # which is exactly the case the 4th element exists for.
+        name, pid, ip = key[0], key[1], key[2]
         tot = _as_bytes(total)
-        prev = baseline.get((name, pid, ip))
+        prev = baseline.get(key)
         pv = _as_bytes(prev) if prev is not None else None
         # ONE rule, applied twice -- see _delta. Gating is unchanged: only the
         # egress delta can suppress a row, so adding bytes_in cannot move any
@@ -306,6 +311,18 @@ def aggregate_flows(flows, baseline, resolve_domain, is_ai, observe=None, warmup
         agg["in"] += delta_in
         if dom is not None and is_ai(dom):
             agg["ai"] += delta
+            # Tagged 'ai' and passed on, from 2026-08-07. Allowlisted flows used
+            # to stop here, which meant the PROXY INVARIANT could never see a
+            # bypass to an allowlisted host -- and the agent's own API is the one
+            # host on that list, i.e. the most likely place an agent that skipped
+            # the proxy would go. The invariant is structural ("this socket
+            # should not exist"), so destination reputation must not pre-filter
+            # it. The 'ai' kind exists so the caller can route this to the
+            # reconciler ONLY: these bytes must still stay out of the ledger, the
+            # covert-channel detector and the fan-out counter, which is what
+            # kills the telemetry-SDK false positive.
+            if observe:
+                observe(pid, "ai", dom, delta, ip)
         elif dom is not None:
             agg["nonai"] += delta
             agg["dests"][dom] = agg["dests"].get(dom, 0) + delta
@@ -384,21 +401,29 @@ class NettopStream(threading.Thread):
     _cur = None
 
     def snapshot(self, now=None, ttl=None):
-        """{(name,pid,ip): Bytes(out, inb)} for connections seen within ttl
-        seconds, summed across concurrent connections to the same destination."""
+        """{(name,pid,ip,conn): Bytes(out, inb)} for connections seen within ttl.
+
+        PER CONNECTION, NOT PER DESTINATION -- changed 2026-08-07 after external
+        review. This used to sum concurrent connections to one destination before
+        `aggregate_flows` took the delta, and that ordering manufactured egress:
+        when one connection closed and aged out of `_latest`, the SUM fell, and
+        `_delta`'s counter-reset rule read the fall as a socket reuse and counted
+        the surviving connection's whole cumulative as fresh bytes. Measured:
+        200 MB + 6 MB to one host, the 200 MB closes, and five minutes later a
+        full RED fires naming 6 MB with **zero bytes sent in between**.
+
+        These counters are cumulative *per connection*, so the delta has to be
+        taken per connection too; aggregation belongs strictly after it. Then an
+        expiring connection is just a key whose delta was always zero.
+        See tests/test_conn_expiry.py.
+        """
         now = time.time() if now is None else now
         ttl = BASELINE_TTL if ttl is None else ttl
-        out = {}
         with self._lock:
             stale = [k for k, (_b, ts) in self._latest.items() if now - ts > ttl]
             for k in stale:
                 del self._latest[k]
-            for (name, pid, ip, _conn), (b, _ts) in self._latest.items():
-                k = (name, pid, ip)
-                cur = out.get(k)
-                out[k] = (Bytes(cur.out + b.out, cur.inb + b.inb) if cur
-                          else Bytes(b.out, b.inb))
-        return out
+            return {k: b for k, (b, _ts) in self._latest.items()}
 
     # --- lifecycle -------------------------------------------------------
     def run(self):
@@ -539,9 +564,25 @@ class Sampler(threading.Thread):
         # pid -> process name for THIS snapshot. Handed to the reconciler at
         # observe time because its verdict lands on a LATER tick, by which point
         # a short-lived flow's process may be absent from every snapshot.
-        names = {p: n for (n, p, _ip) in flows}
+        names = {k[1]: k[0] for k in flows}
 
         def observe(pid, kind, dest, delta, ip):
+            if kind == "ai":
+                # Allowlisted bytes reach the RECONCILER ONLY, and only under
+                # proxy mode. The invariant there is structural -- a socket that
+                # skipped the configured proxy should not exist, whatever it
+                # dialled -- and the agent's own API is the likeliest bypass
+                # target, so the allowlist must not pre-filter it. Everything
+                # else stays excluded: routing these into the ledger, the covert
+                # channel detector or the fan-out counter would resurrect the
+                # telemetry-SDK false positive that the ai/nonai split exists to
+                # kill, and without a proxy configured there is no invariant to
+                # test, so nothing changes at all.
+                if self.recon.proxy:
+                    rn = names.get(pid, "")
+                    self.recon.observe(pid, dest, delta, now, name=rn,
+                                       is_agent=bool(self._agent_for(rn, pid)[0]))
+                return
             self.ledger.add(pid, kind, dest, delta, now)
             self.chan.observe(pid, dest, delta, now)
             # Fan-out keys on the IP, ALWAYS. Feeding it `dest` (a domain when SNI
@@ -550,11 +591,20 @@ class Sampler(threading.Thread):
             # is always present. Caveat: a CDN behind rotating addresses inflates
             # the count, and eTLD+1 collapsing is a v1 refinement.
             self.fan.observe(pid, ip, delta, now)
-            # Reconciliation rides the SAME hook, but note it does NOT inherit the
-            # agent gate: aggregate_flows feeds every non-AI flow here, so EDR,
-            # browsers and OS telemetry arrive too. The gate is applied at drain
-            # time below. Only the AI-endpoint exclusion is genuinely inherited.
-            self.recon.observe(pid, dest, delta, now, name=names.get(pid, ""))
+            # Reconciliation rides the SAME hook and still does NOT inherit the
+            # agent gate for the OBSERVATION -- aggregate_flows feeds every
+            # non-AI flow here, so EDR, browsers and OS telemetry arrive too, and
+            # the accusation gate stays at drain time (see the note there: a
+            # confused deputy must leave a counted mark, not vanish).
+            #
+            # But the NOVELTY BASELINE is gated here, from 2026-08-07. It was not,
+            # and so any destination a browser touched became "known" to the agent
+            # path -- floor 0 -> 64 KB, which is blind to exactly the credential-
+            # sized payloads this module exists for. `_agent_for` is cached per
+            # (name, pid), so this costs one ancestry walk per pid, not per flow.
+            rname = names.get(pid, "")
+            self.recon.observe(pid, dest, delta, now, name=rname,
+                               is_agent=bool(self._agent_for(rname, pid)[0]))
 
         per_pid = aggregate_flows(flows, self.baseline,
                                   self.sni.domain_for_ip, ALLOW.matches,
@@ -739,10 +789,17 @@ class SentinelApp(rumps.App):
 
     @rumps.clicked("About")
     def about(self, _):
+        # This used to advertise a "Team version (audit log + compliance export)
+        # waitlist", contradicting the README's "There is no paid product and no
+        # team edition being built" -- and it was the ONLY prose a user ever saw
+        # inside the app. The single place the honesty claim had to hold was the
+        # one place it did not. Removed 2026-08-07 after external review.
         rumps.alert("Agent Egress Sentinel",
                     "Metadata-only egress monitor for AI coding agents.\n"
                     "No TLS decryption, no root CA. We log our own update ping too.\n\n"
-                    "Team version (audit log + compliance export) waitlist: see README.")
+                    "Research project, not a product: nothing is sold, and the\n"
+                    "acceptance gates have not been run. See PRE-FLIGHT.md for\n"
+                    "what is and is not verified before you trust an alert.")
 
 
 if __name__ == "__main__":
