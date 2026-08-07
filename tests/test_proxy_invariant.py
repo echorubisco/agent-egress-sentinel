@@ -2,8 +2,8 @@
 """
 Under proxy mode the allowlist must not pre-filter the proxy invariant.
 
-THE GAP (found by external review 2026-08-07). RESEARCH-PROGRAM calls the proxy
-invariant "the only detector in this repo that survives the repo's own
+THE GAP (found by external review 2026-08-07). The cross-view design notes call
+the proxy invariant "the only detector in this repo that survives the repo's own
 impossibility argument": if a proxy is configured, agent traffic is supposed to
 go to the proxy and nowhere else, so a direct socket IS the finding regardless of
 volume, reputation or declaration.

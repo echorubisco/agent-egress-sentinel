@@ -134,11 +134,27 @@ check(one_pid["n"] == 1,
       f"cache is why the enabled path is affordable, and it is why the disabled "
       f"path being uncached mattered")
 
-# --- proxy mode: the 'ai' branch has the same shape --------------------------
-ai_off = run(active=False, proxy="127.0.0.1:8080")
-check(ai_off == 0,
-      "with a proxy configured but reconciliation still off, the 'ai' branch "
-      "costs nothing either -- it was guarded on `proxy` but not on `active`")
+# --- proxy mode DELIBERATELY pays, and this assertion records the trade -------
+# This check asserted the opposite until 2026-08-07, and it was right until the
+# proxy invariant was found to be gated on the declaration channel
+# (tests/test_proxy_invariant_active.py). Closing that meant the invariant has to
+# be reachable with reconciliation off -- so under proxy mode the ancestry walk
+# is paid for again.
+#
+# Two tests in tension, resolved by stating the trade rather than by loosening
+# whichever one was inconvenient: correctness of the one structural, non-
+# threshold detector outranks a per-flow cost in a mode the operator opted into
+# by launching under a proxy. The cost is still bounded by the per-pid cache
+# (asserted above). With NO proxy -- the shipped default -- it remains zero,
+# which is the assertion that actually protects the menu-bar app.
+ai_on = run(active=False, proxy="127.0.0.1:8080")
+check(ai_on > 0,
+      f"with a proxy configured, the walk IS paid even with reconciliation off "
+      f"(got {ai_on}) -- the structural invariant must be reachable without a "
+      f"declaration channel, and that is a deliberate, opt-in cost")
+check(off == 0,
+      "and the shipped default -- no proxy, no declarations -- still costs "
+      "nothing, which is the case that protects a 1 Hz menu-bar app")
 
 
 def test_observe_cost():

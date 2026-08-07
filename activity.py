@@ -404,7 +404,13 @@ class Reconciler:
         change in the other direction. sentinel passes the cached `_agent_for`
         verdict. See tests/test_novelty_gate.py.
         """
-        if not self._active or nbytes <= 0:
+        # `_active or _proxy`, not `_active` alone. The proxy invariant in
+        # _verdict() is explicitly the one check a declaration cannot argue
+        # with -- and until 2026-08-07 it was unreachable unless a
+        # declaration file existed AND had been touched within FRESH_SEC.
+        # A structural invariant gated on the channel it is independent of.
+        # See tests/test_proxy_invariant_active.py.
+        if (not self._active and not self._proxy) or nbytes <= 0:
             return
         now = time.time() if now is None else now
         rec = self._pending.get((pid, dest))
@@ -435,7 +441,9 @@ class Reconciler:
         accounting bug of 2026-07-27. Caught by an end-to-end check, not by the
         unit tests, which called this directly.
         """
-        if not self._active:
+        # Same widening as observe(): under proxy mode the structural
+        # verdict must still be reachable with no declaration channel.
+        if not self._active and not self._proxy:
             return []
         now = time.time() if now is None else now
         out = []
@@ -481,6 +489,14 @@ class Reconciler:
         if self._proxy and _host(dest) != self._proxy:
             return (f"proxy is configured ({self._proxy}) but this left the "
                     f"agent tree directly -- a declaration cannot exempt this")
+
+        # No declaration channel -> nothing to reconcile against. Emitting
+        # "no declared activity" here would turn a silent detector into a flood
+        # the moment a proxy is configured, including for traffic that correctly
+        # WENT to the proxy. Under proxy-without-declarations the structural
+        # verdict above is the only thing this function may say.
+        if not self._active:
+            return None
 
         hits = self._matches(p, dest, first, ancestors=ancestors)
         novel_note = "first-time destination; " if novel else ""

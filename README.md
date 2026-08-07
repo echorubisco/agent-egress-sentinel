@@ -438,7 +438,7 @@ behalf and its socket is in nobody's lineage.
 under a local interceptor and set `SENTINEL_PROXY=host:port`. Then *any*
 non-loopback egress from an agent lineage is a finding regardless of what was
 declared, and with no byte floor. This is lifted from the sibling
-[`agent-mitm-audit`](../agent-mitm-audit) design, whose invariant is "a correctly
+`agent-mitm-audit` design (a sibling experiment in the same workspace, not published), whose invariant is "a correctly
 proxied agent tree has no non-loopback socket". It composes here for a reason
 worth noticing: this tool already discards loopback (so a local ollama never
 alarms), which is precisely what makes arriving at the reconciler *at all*

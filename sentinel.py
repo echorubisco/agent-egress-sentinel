@@ -583,7 +583,7 @@ class Sampler(threading.Thread):
                 # guard -- which made a disabled feature pay for an ancestry
                 # walk per flow. See the P1-D note below and
                 # tests/test_observe_cost.py.
-                if self.recon.active and self.recon.proxy:
+                if self.recon.proxy:   # invariant is not gated on `active`
                     rn = names.get(pid, "")
                     self.recon.observe(pid, dest, delta, now, name=rn,
                                        is_agent=bool(self._agent_for(rn, pid)[0]))
@@ -615,7 +615,11 @@ class Sampler(threading.Thread):
             # browser flows. That silently undid "P1-D preserved: cheap
             # ledger/heuristic checks BEFORE the ps fork", and its cost scales
             # with pid churn, which is precisely the workload this tool targets.
-            if self.recon.active:
+            # `or proxy`: the cost guard added earlier must not re-close the
+            # structural invariant, which is reachable without a declaration
+            # channel. Proxy mode is opt-in, so paying the cached ancestry walk
+            # there is a choice the operator made.
+            if self.recon.active or self.recon.proxy:
                 rname = names.get(pid, "")
                 self.recon.observe(pid, dest, delta, now, name=rname,
                                    is_agent=bool(self._agent_for(rname, pid)[0]))
