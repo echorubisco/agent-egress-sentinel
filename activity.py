@@ -455,6 +455,28 @@ class Reconciler:
             rec[2] = now
             if name:
                 rec[3] = name
+            # ONE-WAY UPGRADE toward reporting. `_pending` is keyed (pid, dest),
+            # so every connection to one host merges into this record -- and
+            # port/proto used to be written only on the branch above, i.e. by
+            # whichever connection happened to arrive first. With HTTP/3 that is
+            # routine: TCP/443 and UDP/443 to the same host (Google, Cloudflare,
+            # any CDN). A QUIC packet arriving first therefore SILENTLY SWALLOWED
+            # a real proxy bypass to the same host, and which one arrived first
+            # is nettop's business, not the user's.
+            #
+            # Same shape as the bug this descends from, one level up: that one
+            # lost the port from the join key, this one from the aggregation key.
+            # Both times the dimension the decision needs was missing from the
+            # key, and both times the failure direction was discard.
+            #
+            # Upgrade only, never downgrade: a reportable connection overwrites
+            # an unproxyable one, and an unproxyable one never overwrites
+            # anything. Downgrading would just move the coin flip to the other
+            # end of the tick. An unknown port counts as reportable, because
+            # unknown errs toward reporting everywhere else in this module.
+            # See tests/test_pending_aliasing.py.
+            if len(rec) > 6 and _unproxyable(rec[5], rec[6])                     and not _unproxyable(port, proto):
+                rec[5], rec[6] = port, proto
         if is_agent:
             self._seen_dests[dest] = now
 
