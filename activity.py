@@ -132,6 +132,32 @@ import paths
 import proctree
 
 
+# Ports an HTTP proxy structurally CANNOT carry. Frozen 2026-08-07; the
+# cross-view harness uses the identical list, and widening either one after
+# seeing data is how a measurement becomes a story.
+#
+# This exists because closing the FRESH_SEC gate made the proxy invariant
+# reachable for the first time -- and reachable meant it fired on every DNS and
+# NTP query on the machine. The distinction it restores is the invariant's whole
+# content: "could not have been proxied" (udp/443 is QUIC, 53 is DNS) versus
+# "chose not to be" (tcp/443 direct). Without it those are the same event.
+#
+# UNKNOWN PORT IS NOT EXCLUDED. Excluding on missing data is a discard, and this
+# module's own header says a control that discards is indistinguishable from a
+# detector that does not work. Unknown errs toward reporting.
+STRUCTURAL_PORTS = {53: "dns", 5353: "mdns", 123: "ntp", 67: "dhcp", 68: "dhcp",
+                    1900: "ssdp"}
+
+
+def _unproxyable(port, proto):
+    """True when no HTTP proxy could have carried this, so it is not evidence."""
+    if port is None:
+        return False                       # fail open -- see the note above
+    if port in STRUCTURAL_PORTS:
+        return True
+    return (proto or "").lower() == "udp" and port == 443      # QUIC
+
+
 def _host(target):
     """Host out of a bare host or a URL. We keep the host and drop path/query:
     a full URL can carry secrets, and we would only be logging it."""
@@ -380,7 +406,8 @@ class Reconciler:
                 out.append((ts, dpid, tool, host, nb))
         return out
 
-    def observe(self, pid, dest, nbytes, now=None, name="", is_agent=True):
+    def observe(self, pid, dest, nbytes, now=None, name="", is_agent=True,
+                port=None, proto=None):
         """Feed one non-AI egress delta. No verdict here -- see drain().
 
         `name` is carried so a verdict can still be attributed after the flow has
@@ -419,7 +446,10 @@ class Reconciler:
             # destination recorded. Deciding it later in drain() would always
             # read "seen", because this very observation is what recorded it.
             novel = self._is_novel(dest, now)
-            self._pending[(pid, dest)] = [now, nbytes, now, name, novel]
+            # port/proto ride along so the proxy invariant can tell "could not
+            # have been proxied" from "chose not to be" -- see _unproxyable.
+            self._pending[(pid, dest)] = [now, nbytes, now, name, novel,
+                                          port, proto]
         else:
             rec[1] += nbytes
             rec[2] = now
@@ -449,7 +479,8 @@ class Reconciler:
         out = []
         for (p, dest), rec in sorted(self._pending.items(),
                                      key=lambda kv: kv[1][0]):
-            first, total, _last, name, novel = rec
+            first, total, _last, name, novel = rec[:5]
+            rport, rproto = (rec[5], rec[6]) if len(rec) > 6 else (None, None)
             if now - first < self.SETTLE_SEC:
                 continue
             # Conditional floor. Under proxy mode there is NO floor at all: the
@@ -462,7 +493,8 @@ class Reconciler:
             if now - self._reported.get((p, dest), 0) < self.WINDOW_SEC:
                 continue
             verdict = self._verdict(p, dest, first, total, novel,
-                                    ancestors=ancestors)
+                                    ancestors=ancestors,
+                                    port=rport, proto=rproto)
             if verdict is None:
                 continue
             self._reported[(p, dest)] = now
@@ -477,7 +509,7 @@ class Reconciler:
         return None
 
     def _verdict(self, p, dest, first, total, novel=False,
-                 ancestors=proctree.ancestors):
+                 ancestors=proctree.ancestors, port=None, proto=None):
         """The note to report for one settled observation, or None if explained."""
         # (1) PROXY INVARIANT FIRST -- imported from the mitm-audit design, and
         # the only verdict here a declaration cannot argue with. If a proxy is
@@ -486,24 +518,17 @@ class Reconciler:
         # reaching it at all IS the finding. Checked before declarations on
         # purpose: this is the one place where "but it was declared" is not a
         # defence.
-        # ⚠️ KNOWN FLOOD, 2026-08-07. This fires on DNS, NTP, DHCP, QUIC and
-        # multicast too -- everything an HTTP proxy structurally CANNOT carry.
-        # Verified: 192.168.1.1, 8.8.8.8 and an NTP host all produce this verdict.
-        # And it cannot be filtered here, because `_remote_host` strips the port
-        # upstream, so the reconciler never learns whether a destination was
-        # :53 or :443. The information needed to tell "could not be proxied" from
-        # "chose not to be" is discarded before it arrives.
+        # Structural exclusion, added the same day the flood was created. Closing
+        # the FRESH_SEC gate made this invariant reachable for the first time, and
+        # reachable meant it fired on every DNS and NTP query on the machine.
         #
-        # This was LATENT until today: the invariant was unreachable without a
-        # fresh declaration file, so nobody could have hit it. Closing that gate
-        # made a real flood reachable. Stated rather than silently shipped --
-        # SENTINEL_PROXY is opt-in and now warns at startup.
-        #
-        # The fix is to plumb the remote port through to observe() and apply the
-        # frozen structural list (dns/mdns/ntp/dhcp/ssdp, udp:443, multicast,
-        # link-local) that the cross-view harness already uses. Not done here
-        # because it changes the observe() signature and today has changed enough.
-        if self._proxy and _host(dest) != self._proxy:
+        # The first write-up of that said it COULD NOT be filtered because the
+        # port is stripped upstream. That was wrong and gave up too early: the
+        # flow key carries nettop's own connection column, which has the remote
+        # port and the protocol. Nothing was lost -- nobody had passed it on.
+        # See sentinel._remote_port_proto and tests/test_structural_bypass.py.
+        if (self._proxy and _host(dest) != self._proxy
+                and not _unproxyable(port, proto)):
             return (f"proxy is configured ({self._proxy}) but this left the "
                     f"agent tree directly -- a declaration cannot exempt this")
 

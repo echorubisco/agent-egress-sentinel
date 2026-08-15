@@ -65,7 +65,7 @@ def _run(events):
                 st._latest[(NAME, PID, IP, c)] = (S.Bytes(b, 0), t)
         snap = st.snapshot(now=t)
 
-        def observe(pid, kind, dest, delta, ip=None):
+        def observe(pid, kind, dest, delta, ip=None, port=None, proto=None):
             counted.append(delta)
             if kind != "ai" and led.add(pid, kind, dest, delta, now=t):
                 reds.append((dest, delta))

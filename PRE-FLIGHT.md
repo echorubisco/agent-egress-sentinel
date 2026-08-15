@@ -116,14 +116,16 @@ Caveats, so the first number is read correctly:
   (measured 3.1–3.4× amplification). So the shipped default silently misses a
   split ClientHello. Undecided whether to flip it.
 - Breadth (`fanout`) is on by default and uncalibrated. Amber only.
-- **`SENTINEL_PROXY` floods, and this got worse today.** The proxy invariant now
-  fires whenever a destination is not the proxy — which includes DNS, NTP, DHCP
-  and QUIC, none of which an HTTP proxy can carry. It cannot be filtered because
-  `_remote_host` strips the port before the reconciler sees it. Until 2026-08-07
-  the invariant was unreachable at all (gated on a fresh declaration file), so
-  this was latent; closing that gate made it reachable. Opt-in, and it warns at
-  startup. Fix is to plumb the port through and apply the structural list the
-  cross-view harness already uses.
+- **`SENTINEL_PROXY` no longer floods, but its exclusion list is uncalibrated.**
+  Closing the FRESH_SEC gate made the proxy invariant reachable for the first
+  time and it immediately fired on every DNS and NTP query. Fixed the same day by
+  recovering the remote port and protocol from nettop's connection column — which
+  the flow key already carried; the first diagnosis of "the port is stripped, this
+  cannot be filtered" was wrong. Structurally unproxyable traffic
+  (DNS/mDNS/NTP/DHCP/SSDP, QUIC) is now excluded; **an unknown port is reported
+  rather than excluded**, on the rule that a discard is indistinguishable from a
+  broken detector. The frozen list is a judgement, not a measurement: it has
+  never been run against a real machine's traffic mix.
 - SIGSTOP-and-resume inside the 15 s dead-man window, and the sibling-process
   confused deputy, are documented and not closable at this privilege level.
 - **The Windows port is half-built and its half is live-verified.** As of

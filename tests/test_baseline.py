@@ -73,7 +73,7 @@ check(_un(aggregate_flows(same, {("claude", "100", "203.0.113.9"): 518},
 seen = []
 aggregate_flows({("claude", "100", "203.0.113.9"): 900},
                 {}, lambda ip: "cdn.example.com", NOT_AI,
-                observe=lambda pid, kind, dest, delta, ip: seen.append((kind, dest, ip)))
+                observe=lambda pid, kind, dest, delta, ip, port=None, proto=None: seen.append((kind, dest, ip)))
 check(seen == [("dom", "cdn.example.com", "203.0.113.9")],
       "observe() carries BOTH dest and ip (fan-out keys on ip, ledger on dest)")
 

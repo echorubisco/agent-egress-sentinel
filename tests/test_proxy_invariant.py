@@ -55,7 +55,8 @@ def run(flows, dom):
     seen = []
     per_pid = S.aggregate_flows(
         flows, {}, lambda ip: dom, lambda d: d == "api.anthropic.com",
-        observe=lambda pid, kind, dest, delta, ip: seen.append((kind, dest, delta)))
+        observe=lambda pid, kind, dest, delta, ip, port=None, proto=None:
+            seen.append((kind, dest, delta)))
     return per_pid, seen
 
 

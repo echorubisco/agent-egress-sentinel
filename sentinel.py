@@ -194,6 +194,37 @@ def _delta(prev, total, warmup):
     return total - prev
 
 
+_CONN_RE = re.compile(r"^\s*(tcp|udp)[46]?\s+\S+<->(.+?)\s*$")
+
+
+def _remote_port_proto(conn):
+    """(remote_port, 'tcp'|'udp') from a nettop connection column, or (None, None).
+
+    The column looks like `tcp4 10.0.0.5:51000<->203.0.113.77:443` -- protocol
+    AND remote port, both of which the rest of the pipeline threw away because
+    `_remote_host` strips the port to build the join key. Nothing was lost; it
+    was simply never passed on, and without it the proxy invariant cannot tell
+    "an HTTP proxy could not have carried this" (UDP 443 is QUIC, 53 is DNS)
+    from "this chose not to be carried" (TCP 443 direct). That distinction is
+    the whole content of a structural invariant.
+
+    Returns (None, None) rather than raising: a caller that gets no port must
+    still decide, and the decision is documented at activity.STRUCTURAL_PORTS
+    (it errs toward reporting).
+    """
+    m = _CONN_RE.match(conn or "")
+    if not m:
+        return None, None
+    proto, remote = m.group(1), m.group(2).strip()
+    port = _PORT_RE.search(remote)
+    if not port:
+        return None, proto
+    try:
+        return int(port.group(0)[1:]), proto
+    except ValueError:
+        return None, proto
+
+
 def _remote_host(remote: str) -> str:
     """Strip the trailing port from a nettop remote endpoint. nettop uses
     'host:port' for IPv4/hostnames but 'v6addr.port' for IPv6 (dot separator,
@@ -296,6 +327,10 @@ def aggregate_flows(flows, baseline, resolve_domain, is_ai, observe=None, warmup
         # string -- but it cannot express two connections to one destination,
         # which is exactly the case the 4th element exists for.
         name, pid, ip = key[0], key[1], key[2]
+        # Recovered from the connection column, which the 4-tuple key already
+        # carries. Needed by the proxy invariant to separate "could not have
+        # been proxied" from "chose not to be" -- see _remote_port_proto.
+        rport, rproto = _remote_port_proto(key[3] if len(key) > 3 else "")
         tot = _as_bytes(total)
         prev = baseline.get(key)
         pv = _as_bytes(prev) if prev is not None else None
@@ -322,16 +357,16 @@ def aggregate_flows(flows, baseline, resolve_domain, is_ai, observe=None, warmup
             # covert-channel detector and the fan-out counter, which is what
             # kills the telemetry-SDK false positive.
             if observe:
-                observe(pid, "ai", dom, delta, ip)
+                observe(pid, "ai", dom, delta, ip, rport, rproto)
         elif dom is not None:
             agg["nonai"] += delta
             agg["dests"][dom] = agg["dests"].get(dom, 0) + delta
             if observe:
-                observe(pid, "dom", dom, delta, ip)
+                observe(pid, "dom", dom, delta, ip, rport, rproto)
         else:
             agg["unresolved"] += delta
             if observe:
-                observe(pid, "ip", ip, delta, ip)
+                observe(pid, "ip", ip, delta, ip, rport, rproto)
     return per_pid
 
 
@@ -531,11 +566,12 @@ class Sampler(threading.Thread):
         # doing nothing is how a broken integration stays invisible.
         was = self.recon_state
         if self.recon.proxy and self.recon_state is None:
-            log("WARN SENTINEL_PROXY is set: the proxy invariant fires on ANY "
-                "destination that is not the proxy, INCLUDING DNS, NTP, DHCP and "
-                "QUIC, which an HTTP proxy cannot carry. Expect amber noise "
-                "proportional to that traffic. The port is stripped upstream, so "
-                "this cannot be filtered yet -- see activity._verdict.")
+            log("INFO SENTINEL_PROXY is set: any agent destination that is not "
+                "the proxy is an invariant violation, regardless of volume or "
+                "declaration. Traffic an HTTP proxy structurally cannot carry "
+                "(DNS/mDNS/NTP/DHCP/SSDP, QUIC) is excluded; anything else -- "
+                "including SSH -- is reported. An unknown port is reported "
+                "rather than excluded, so expect some noise there.")
         is_now = self.recon.refresh(now)
         if was is not None and was != is_now:
             log(f"INFO reconciliation {'active' if is_now else 'inactive'} "
@@ -572,7 +608,7 @@ class Sampler(threading.Thread):
         # a short-lived flow's process may be absent from every snapshot.
         names = {k[1]: k[0] for k in flows}
 
-        def observe(pid, kind, dest, delta, ip):
+        def observe(pid, kind, dest, delta, ip, port=None, proto=None):
             if kind == "ai":
                 # Allowlisted bytes reach the RECONCILER ONLY, and only under
                 # proxy mode. The invariant there is structural -- a socket that
@@ -591,7 +627,8 @@ class Sampler(threading.Thread):
                 # tests/test_observe_cost.py.
                 if self.recon.proxy:   # invariant is not gated on `active`
                     rn = names.get(pid, "")
-                    self.recon.observe(pid, dest, delta, now, name=rn,
+                    self.recon.observe(pid, dest, delta, now, name=rn, port=port,
+                                       proto=proto,
                                        is_agent=bool(self._agent_for(rn, pid)[0]))
                 return
             self.ledger.add(pid, kind, dest, delta, now)
@@ -627,7 +664,8 @@ class Sampler(threading.Thread):
             # there is a choice the operator made.
             if self.recon.active or self.recon.proxy:
                 rname = names.get(pid, "")
-                self.recon.observe(pid, dest, delta, now, name=rname,
+                self.recon.observe(pid, dest, delta, now, name=rname, port=port,
+                                   proto=proto,
                                    is_agent=bool(self._agent_for(rname, pid)[0]))
 
         per_pid = aggregate_flows(flows, self.baseline,
