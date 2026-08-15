@@ -27,4 +27,5 @@ xview.py
 xview_proxy.py
 xview_capture.py
 xview_report.py
+xview_recon_run.py
 tests/test_xview.py

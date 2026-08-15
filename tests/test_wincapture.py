@@ -52,13 +52,13 @@ check(W.translate(42, ev()) == (4242, "93.184.216.34", 1000, 0),
 # TCP recv: daddr is the connection's remote. UDP recv: daddr is the PACKET's
 # destination -- this host, or a multicast group -- and the peer is in saddr.
 # Reading daddr for both produced `claude.exe -> <this machine's own LAN IP>`.
-check(W.translate(11, ev(daddr="203.0.113.9", saddr="192.168.1.157"))
+check(W.translate(11, ev(daddr="203.0.113.9", saddr="192.0.2.10"))
       == (4242, "203.0.113.9", 0, 1000),
       "TCP Recv (11) takes the remote from daddr (connection semantics)")
 check(W.translate(27, ev(daddr="2001:db8:1::1", saddr="2001:db8::348"))
       == (4242, "2001:db8:1::1", 0, 1000),
       "TCP IPv6 Recv (27) takes the remote from daddr")
-check(W.translate(43, ev(daddr="192.168.1.157", saddr="203.0.113.9"))
+check(W.translate(43, ev(daddr="192.0.2.10", saddr="203.0.113.9"))
       == (4242, "203.0.113.9", 0, 1000),
       "UDP Recv (43) takes the remote from SADDR -- daddr is this host, and "
       "reading it attributed inbound DNS to the machine's own address")
@@ -89,7 +89,7 @@ check(W.translate(10, ev(daddr="localhost")) is None, "'localhost' is dropped")
 # Multicast was the single largest inbound source in the first 20 s live run.
 # Each group would also have counted as a distinct destination in the per-pid
 # fan-out counter -- the one detector that keys on breadth.
-check(W.translate(43, ev(daddr="192.168.1.157", saddr="224.0.0.251")) is None,
+check(W.translate(43, ev(daddr="192.0.2.10", saddr="224.0.0.251")) is None,
       "IPv4 multicast (mDNS 224.0.0.251) is not a destination")
 check(W.translate(59, ev(daddr="2001:db8::348", saddr="ff02::fb")) is None,
       "IPv6 multicast (mDNS ff02::fb) is not a destination")

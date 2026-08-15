@@ -257,7 +257,7 @@ unknown here.
    > | TCP recv (11, 27) | `daddr` — the connection's remote |
    > | UDP recv (43, 59) | **`saddr`** — `daddr` is the *packet's* destination: this host, or a multicast group |
    >
-   > Reading `daddr` throughout produced `claude.exe -> 192.168.1.157` (this
+   > Reading `daddr` throughout produced `claude.exe -> 192.0.2.10` (this
    > machine's own LAN address) and `chrome.exe -> 224.0.0.251` (mDNS). Nonsense
    > destinations — and each multicast group would have counted as a distinct
    > peer in the **per-pid fan-out counter**, the one detector that keys on

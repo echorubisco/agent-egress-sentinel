@@ -65,7 +65,7 @@ DATA_IDS = SEND_IDS | RECV_IDS
 #   UDP recv (43, 59)  -> `daddr` is the PACKET's destination, i.e. US, or a
 #                         multicast group. The remote peer is in `saddr`.
 #
-# Reading `daddr` for all of them produced rows like `claude.exe -> 192.168.1.157`
+# Reading `daddr` for all of them produced rows like `claude.exe -> 192.0.2.10`
 # (this machine's own LAN address) and `chrome.exe -> 224.0.0.251` (mDNS). Both
 # are nonsense destinations, and the multicast ones would have inflated the
 # per-pid fan-out counter with peers that do not exist.
