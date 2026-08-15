@@ -126,10 +126,19 @@ Caveats, so the first number is read correctly:
   rather than excluded**, on the rule that a discard is indistinguishable from a
   broken detector. The frozen list is a judgement, not a measurement: it has
   never been run against a real machine's traffic mix.
+- **That exclusion then aliased across connections to one host, for a few hours.**
+  `_pending` is keyed `(pid, dest)`, so every connection to a host merges into one
+  record — and port/proto were written only by whichever arrived FIRST. With
+  HTTP/3 (TCP/443 and UDP/443 to the same host: Google, Cloudflare, any CDN) a
+  QUIC packet arriving first silently swallowed a real proxy bypass to that host,
+  and the order is nettop's, not the user's. Fixed by a one-way upgrade on the
+  merge branch. **Anyone running the hour-long proxy-invariant session must be on
+  commit `bd57c6c` or later**: before it, a "zero bypasses" result could have been
+  produced by ordering alone.
 - SIGSTOP-and-resume inside the 15 s dead-man window, and the sibling-process
   confused deputy, are documented and not closable at this privilege level.
 - **The Windows port is half-built and its half is live-verified.** As of
-  2026-08-06 the suite is **20 of 20 files, 305 executed assertions, green on Windows**
+  2026-08-06 the suite is **23 of 23 files, 342 executed assertions, green on Windows**
   (was 3 of 13 — ten of those were a single `import pwd` in `paths.py`, the last
   was `tcpdump -r`). Byte counts work: `wincapture.py` reads ETW and was verified
   against a real 20 s elevated capture. Offline pcap replay runs anywhere.
