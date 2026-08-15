@@ -486,6 +486,23 @@ class Reconciler:
         # reaching it at all IS the finding. Checked before declarations on
         # purpose: this is the one place where "but it was declared" is not a
         # defence.
+        # ⚠️ KNOWN FLOOD, 2026-08-07. This fires on DNS, NTP, DHCP, QUIC and
+        # multicast too -- everything an HTTP proxy structurally CANNOT carry.
+        # Verified: 192.168.1.1, 8.8.8.8 and an NTP host all produce this verdict.
+        # And it cannot be filtered here, because `_remote_host` strips the port
+        # upstream, so the reconciler never learns whether a destination was
+        # :53 or :443. The information needed to tell "could not be proxied" from
+        # "chose not to be" is discarded before it arrives.
+        #
+        # This was LATENT until today: the invariant was unreachable without a
+        # fresh declaration file, so nobody could have hit it. Closing that gate
+        # made a real flood reachable. Stated rather than silently shipped --
+        # SENTINEL_PROXY is opt-in and now warns at startup.
+        #
+        # The fix is to plumb the remote port through to observe() and apply the
+        # frozen structural list (dns/mdns/ntp/dhcp/ssdp, udp:443, multicast,
+        # link-local) that the cross-view harness already uses. Not done here
+        # because it changes the observe() signature and today has changed enough.
         if self._proxy and _host(dest) != self._proxy:
             return (f"proxy is configured ({self._proxy}) but this left the "
                     f"agent tree directly -- a declaration cannot exempt this")

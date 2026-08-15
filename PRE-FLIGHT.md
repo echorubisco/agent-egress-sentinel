@@ -116,6 +116,14 @@ Caveats, so the first number is read correctly:
   (measured 3.1–3.4× amplification). So the shipped default silently misses a
   split ClientHello. Undecided whether to flip it.
 - Breadth (`fanout`) is on by default and uncalibrated. Amber only.
+- **`SENTINEL_PROXY` floods, and this got worse today.** The proxy invariant now
+  fires whenever a destination is not the proxy — which includes DNS, NTP, DHCP
+  and QUIC, none of which an HTTP proxy can carry. It cannot be filtered because
+  `_remote_host` strips the port before the reconciler sees it. Until 2026-08-07
+  the invariant was unreachable at all (gated on a fresh declaration file), so
+  this was latent; closing that gate made it reachable. Opt-in, and it warns at
+  startup. Fix is to plumb the port through and apply the structural list the
+  cross-view harness already uses.
 - SIGSTOP-and-resume inside the 15 s dead-man window, and the sibling-process
   confused deputy, are documented and not closable at this privilege level.
 - **The Windows port is half-built and its half is live-verified.** As of

@@ -530,6 +530,12 @@ class Sampler(threading.Thread):
         # declarations that already exist. Log the on/off transition: silently
         # doing nothing is how a broken integration stays invisible.
         was = self.recon_state
+        if self.recon.proxy and self.recon_state is None:
+            log("WARN SENTINEL_PROXY is set: the proxy invariant fires on ANY "
+                "destination that is not the proxy, INCLUDING DNS, NTP, DHCP and "
+                "QUIC, which an HTTP proxy cannot carry. Expect amber noise "
+                "proportional to that traffic. The port is stripped upstream, so "
+                "this cannot be filtered yet -- see activity._verdict.")
         is_now = self.recon.refresh(now)
         if was is not None and was != is_now:
             log(f"INFO reconciliation {'active' if is_now else 'inactive'} "
